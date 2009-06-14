@@ -14,12 +14,14 @@
 
 inherit eutils base
 
+EXPORTED_FUNCTIONS="src_unpack src_compile src_test src_install"
+
 case "${EAPI:-0}" in
 	0|1)
-		EXPORT_FUNCTIONS pkg_setup pkg_preinst pkg_postinst pkg_prerm pkg_postrm src_compile src_install src_test src_unpack
+		EXPORTED_FUNCTIONS="${EXPORTED_FUNCTIONS} pkg_setup pkg_preinst pkg_postinst pkg_prerm pkg_postrm"
 		;;
 	2)
-		EXPORT_FUNCTIONS src_unpack src_prepare src_configure src_compile src_test src_install
+		EXPORTED_FUNCTIONS="${EXPORTED_FUNCTIONS} src_prepare src_configure"
 
 		case "${GENTOO_DEPEND_ON_PERL:-yes}" in
 			yes)
@@ -27,8 +29,14 @@ case "${EAPI:-0}" in
 				RDEPEND="${DEPEND}"
 				;;
 		esac
+		if [[ ${CATEGORY} == "perl-core" ]] ; then
+			inherit alternatives
+			EXPORTED_FUNCTIONS="${EXPORTED_FUNCTIONS} pkg_postinst pkg_postrm"
+		fi
 		;;
 esac
+
+EXPORT_FUNCTIONS ${EXPORTED_FUNCTIONS}
 
 DESCRIPTION="Based on the $ECLASS eclass"
 
@@ -53,6 +61,7 @@ VENDOR_LIB=""
 
 pm_echovar=""
 perlinfo_done=false
+DUALLIFESCRIPT=""
 
 perl-module_src_unpack() {
 	base_src_unpack unpack
@@ -178,6 +187,8 @@ if grep -q "${D}" "${f}" ; then ewarn "QA: File contains a temporary path ${f}" 
 			sed -i -e "s:${D}:/:g" "${f}"
 		fi
 	done
+
+	[[ ${CATEGORY} == "perl-core" ]] && fixduallifescripts
 }
 
 perl-module_pkg_setup() {
@@ -188,14 +199,15 @@ perl-module_pkg_preinst() {
 	${perlinfo_done} || perlinfo
 }
 
-perl-module_pkg_postinst() { : ; }
-#	einfo "Man pages are not installed for most modules now."
-#	einfo "Please use perldoc instead."
-#}
+perl-module_pkg_postinst() {
+	[[ ${CATEGORY} == "perl-core" ]] && fixduallifescripts
+}
+
+perl-module_pkg_postrm() {
+	[[ ${CATEGORY} == "perl-core" ]] && fixduallifescripts
+}
 
 perl-module_pkg_prerm() { : ; }
-
-perl-module_pkg_postrm() { : ; }
 
 perlinfo() {
 	perlinfo_done=true
@@ -215,4 +227,26 @@ perlinfo() {
 fixlocalpod() {
 	find "${D}" -type f -name perllocal.pod -delete
 	find "${D}" -depth -mindepth 1 -type d -empty -delete
+}
+
+fixduallifescripts() {
+	local i ff
+	if has "${EBUILD_PHASE:-none}" "postinst" "postrm" ; then
+		for i in ${DUALLIFESCRIPT} ; do
+			alternatives_auto_makesym "/usr/bin/${i}" "/usr/bin/${i}-*"
+				ff=`echo "${ROOT}"/usr/share/man/man1/${i}-${PV}-${P}.1*`
+				ff=${ff##*.1}
+				alternatives_auto_makesym "/usr/share/man/man1/${i}.1${ff}" "/usr/share/man/man1/${i}-*"
+		done
+	else
+		pushd "${D}" > /dev/null
+		for i in $(find usr/bin -maxdepth 1 -type f ) ; do
+			mv ${i}{,-${PV}-${P}} || die
+			DUALLIFESCRIPT="${DUALLIFESCRIPT} ${i##*/}"
+			if [[ -f usr/share/man/man1/${i##*/}.1 ]] ; then
+				mv usr/share/man/man1/${i##*/}{.1,-${PV}-${P}.1} || die
+			fi
+		done
+		popd > /dev/null
+	fi
 }
