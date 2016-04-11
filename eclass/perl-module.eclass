@@ -1,16 +1,22 @@
 # Copyright 1999-2015 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/eclass/perl-module.eclass,v 1.163 2015/03/14 14:32:10 dilfridge Exp $
+# $Id$
 
 # @ECLASS: perl-module.eclass
 # @MAINTAINER:
 # perl@gentoo.org
 # @AUTHOR:
 # Seemant Kulleen <seemant@gentoo.org>
-# @BLURB: eclass for perl modules
+# Andreas K. Hüttel <dilfridge@gentoo.org>
+# @BLURB: eclass for installing Perl module distributions
 # @DESCRIPTION:
-# The perl-module eclass is designed to allow easier installation of perl
-# modules, and their incorporation into the Gentoo Linux system.
+# The perl-module eclass is designed to allow easier installation of Perl
+# module distributions, and their incorporation into the Gentoo Linux system.
+# All exported functions from perl-functions.eclass (inherited here)
+# explicitly also belong to the interface of perl-module.eclass.
+# If your package does not use any Perl-specific build system (as, e.g.,
+# ExtUtils::MakeMaker or Module::Build), we recommend to use perl-functions.eclass
+# instead.
 
 inherit eutils multiprocessing unpacker perl-functions
 [[ ${CATEGORY} == "perl-core" ]] && inherit alternatives
@@ -23,6 +29,14 @@ case "${EAPI:-0}" in
 	*)	die "EAPI=${EAPI} is not supported by perl-module.eclass"
 		;;
 esac
+
+# @ECLASS-VARIABLE: GENTOO_DEPEND_ON_PERL
+# @DESCRIPTION:
+# This variable controls whether a runtime and build time dependency on
+# dev-lang/perl is automatically added by the eclass. It defaults to yes.
+# Set to no to disable, set to noslotop to add a perl dependency without
+# slot operator (EAPI=6). All packages installing into the vendor_perl
+# path must use yes here.
 
 case "${GENTOO_DEPEND_ON_PERL:-yes}" in
 yes)
