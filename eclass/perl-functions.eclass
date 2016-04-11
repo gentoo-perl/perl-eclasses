@@ -69,6 +69,8 @@ perl_check_module_version() {
 	fi
 }
 
+perlinfo_done=false
+
 # @FUNCTION: perl_set_version
 # @USAGE: perl_set_version
 # @DESCRIPTION:
