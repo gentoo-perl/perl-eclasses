@@ -566,3 +566,64 @@ perl_test_verbose() {
 	fi
 	return 1; # false
 }
+
+pm_warned_parallel=0
+perl_test_parallel() {
+	debug-print-function $FUNCNAME "$@"
+
+	# USER restrict always wins and is easy to check
+	# USER can only disable parallelism, not enable it
+	if has 'parallel-test' ${USER_PERL_RESTRICT}; then
+		[[ "${pm_warned_parallel:-0}" != 1 ]] && ewarn "Disabled parallel testing due to USER_PERL_RESTRICT=parallel-test"
+		pm_warned_parallel=1
+		return 1; # false
+	fi
+
+	# Parallelism + Verbose don't work together
+	# Either you'll have non-verbose tests, or you'll have non-parallel tests,
+	# or you might get lots of failures for no reason.
+	if perl_test_verbose; then
+		[[ "${pm_warned_parallel:-0}" != 1 ]] && ewarn "Disabled parallel testing due to verbose testing being enabled"
+		pm_warned_parallel=1
+		return 1; # false
+	fi
+
+	if [[ "${EAPI:-0}" == 5 ]]; then
+		# EAPI5 + overlay assumes parallelism on, unless blocked by PERL_RESTRICT
+		# PERL_RESTRICT can only disable parallelism, not enable it
+		if has 'parallel-test' ${PERL_RESTRICT}; then
+			[[ "${pm_warned_parallel:-0}" != 1 ]] && ewarn "Disabled parallel testing due to PERL_RESTRICT=parallel-test"
+			pm_warned_parallel=1
+			return 1; # false
+		fi
+		# No EAPI5 Rules have stopped parallelism, yay!
+		return 0; # true
+	fi
+
+	# EAPI6+
+	# Override string always wins when set
+	if perl_dist_override; then
+		# Users can turn on parallel even if the dist explicitly revokes it!
+		# What could possibly go wrong!
+		if ! has 'parallel' ${DIST_TEST_OVERRIDE}; then
+			[[ "${pm_warned_parallel:-0}" != 1 ]] && ewarn "Disabled parallel testing due to DIST_TEST_OVERRIDE !~ parallel"
+			pm_warned_parallel=1
+			return 1; # false
+		fi
+		if [ -v DIST_TEST ] && ! has 'parallel' "${DIST_TEST}"; then
+			[[ "${pm_warned_parallel:-0}" != 1 ]] && ewarn "Parallel testing forced due to DIST_TEST_OVERRIDE =~ parallel"
+			pm_warned_parallel=1
+			return 0; # true
+		fi
+		# user has simply forced the default, no warning here.
+		return 0; # true
+	fi
+	# No override
+	if [ -v DIST_TEST ] && ! has 'parallel' ${DIST_TEST}; then
+		[[ "${pm_warned_parallel:-0}" != 1 ]] && ewarn "Disabled parallel testing due to DIST_TEST assigned and !~ parallel"
+		pm_warned_parallel=1
+		return 1; # false
+	fi
+	# Nothing in any EAPI says "don't parallel", so parallel it is!
+	return 0; # true
+}
