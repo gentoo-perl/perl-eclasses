@@ -628,6 +628,24 @@ perl_test_parallel() {
 	return 0; # true
 }
 
+# Note: Overlay EAPI5 says PERL_RESTRICT=network-test ==
+# I want network access
+perl_test_wants_network() {
+	if [[ "${EAPI:-0}" == 5 ]]; then
+		if has 'network-test' "${PERL_RESTRICT}"; then
+			return 0; # we want networking
+		fi
+		return 1; # nah
+	fi
+
+	# DIST_TEST+="network" says "Don't try to disable network".
+	# Nobody uses this.
+	if has 'network' "${DIST_TEST}"; then
+		return 0; #  Yes
+	fi
+	return 1; # No
+}
+
 pm_warned_network=0
 perl_test_network() {
 	debug-print-function $FUNCNAME "$@"
