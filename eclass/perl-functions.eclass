@@ -478,9 +478,18 @@ perl_check_eapi() {
 	die "Please file a bug for this ebuild as per above details."
 }
 
-pmqa_warned_notests=0;
 pm_warned_override=0;
+perl_dist_override() {
+	[[ "${EAPI:-0}" == 5 ]] && return 1; # false => No overides possible
+	if [[ -n "${DIST_TEST_OVERRIDE}" ]]; then
+		[[ "${pm_warned_override}" != 1 ]] && ewarn "DIST_TEST_OVERRIDE is set to ${DIST_TEST_OVERRIDE}"
+		pm_warned_override=1
+		return 0; # true, overridden
+	fi
+	return 1;
+}
 
+pmqa_warned_notests=0;
 perl_test_disabled() {
 	local my_test_control;
 	debug-print-function $FUNCNAME "$@"
