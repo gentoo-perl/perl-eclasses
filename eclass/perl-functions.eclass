@@ -545,7 +545,7 @@ perl_test_verbose() {
 
 	if [[ "${EAPI:-0}" == 5 ]]; then
 		if ! has 0 "${TEST_VERBOSE:-0}"; then
-			[[ "${pm_warned_verbose:-0}" != 1 ]] && "Enabled verbose testing due to TEST_VERBOSE=${TEST_VERBOSE}"
+			[[ "${pm_warned_verbose:-0}" != 1 ]] && ewarn "Enabled verbose testing due to TEST_VERBOSE=${TEST_VERBOSE}"
 			pm_warned_verbose=1
 			return 0; # true
 		fi
@@ -553,14 +553,14 @@ perl_test_verbose() {
 	fi
 	if perl_dist_override; then
 		if has 'verbose' ${DIST_TEST_OVERRIDE}; then
-			[[ "${pm_warned_verbose:-0}" != 1 ]] && "Enabled verbose testing due to DIST_TEST_OVERRIDE=verbose"
+			[[ "${pm_warned_verbose:-0}" != 1 ]] && ewarn "Enabled verbose testing due to DIST_TEST_OVERRIDE=verbose"
 			pm_warned_verbose=1
 			return 0; # true
 		fi
 		return 1; # false
 	fi
 	if has 'verbose' ${DIST_TEST}; then
-		[[ "${pm_warned_verbose:-0}" != 1 ]] && "Enabled verbose testing due to DIST_TEST=verbose"
+		[[ "${pm_warned_verbose:-0}" != 1 ]] && einfo "Enabled verbose testing due to DIST_TEST=verbose"
 		pm_warned_verbose=1
 		return 0; # true
 	fi
