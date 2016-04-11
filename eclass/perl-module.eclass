@@ -21,11 +21,11 @@
 case ${EAPI:-0} in
 	5)
 		inherit eutils multiprocessing unpacker perl-functions
-		PERL_EXPF="src_unpack src_prepare src_configure src_compile src_test src_install"
+		PERL_EXPF="src_unpack src_prepare src_configure src_compile src_test src_install pkg_setup"
 		;;
 	6)
 		inherit multiprocessing perl-functions
-		PERL_EXPF="src_prepare src_configure src_compile src_test src_install"
+		PERL_EXPF="src_prepare src_configure src_compile src_test src_install pkg_setup"
 		;;
 	*)
 		die "EAPI=${EAPI} is not supported by perl-module.eclass"
@@ -165,6 +165,10 @@ PREFER_BUILDPL="yes"
 
 pm_echovar=""
 
+perl-module_pkg_setup() {
+	perl_check_eapi
+	perl_check_env
+}
 # @FUNCTION: perl-module_src_unpack
 # @USAGE: perl-module_src_unpack
 # @DESCRIPTION:
@@ -211,8 +215,6 @@ perl-module_src_configure() {
 		return 0
 	fi
 	SRC_PREP="yes"
-
-	perl_check_env
 
 	perl_set_version
 
