@@ -477,3 +477,57 @@ perl_check_eapi() {
 	eerror "Your ebuild/env contains eclass variables that are known invalid/legacy and indicate author oversight."
 	die "Please file a bug for this ebuild as per above details."
 }
+
+pmqa_warned_notests=0;
+pm_warned_override=0;
+
+perl_test_disabled() {
+	local my_test_control;
+	debug-print-function $FUNCNAME "$@"
+
+	# RESTRICT=test == tests disabled
+	has 'test' ${RESTRICT} && return 0; # true
+
+	if [[ ${EAPI:-0} == 5 ]]; then
+		# No SRC_TEST == tests run, this is the overlay
+		# Tests should run by default like they do in EAPI6
+		[ -v SRC_TEST ] || return 1; # false
+
+		has 'do' 		${SRC_TEST} || return 1; # false
+		has 'parallel' 	${SRC_TEST} || return 1; # false
+
+		if [[ "${pmqa_warned_notests:-0}" != 1 ]]; then
+			eqawarn "Tests disabled using empty SRC_TEST";
+			eqawarn "Please use RESTRICT=test or nuke problem tests"
+		fi
+		pmqa_warned_notests=1
+		return 0; # true
+	fi
+
+	# This is mostly so perl_test_disabled()
+	# still returns the right result outside src_test()
+	if in_iuse test && ! use test ; then
+		return 0; # true
+	fi
+	# Both of these being unset == tests are enabled
+	if [ ! -v DIST_TEST ] && [ ! -v DIST_TEST_OVERRIDE ]; then
+		return 1; # false
+	fi
+	# The ability for users to disable all tests using DIST_TEST_OVERRIDE is clearly
+	# a design defect.
+	if [[ -n "${DIST_TEST_OVERRIDE}" ]]; then
+		[[ "${pm_warned_override}" != 1 ]] && ewarn "DIST_TEST_OVERRIDE is set to ${DIST_TEST_OVERRIDE}"
+		pm_warned_override=1
+		has 'do' 		${DIST_TEST_OVERRIDE} || return 1; # false ( tests enabled )
+		has 'parallel' 	${DIST_TEST_OVERRIDE} || return 1; # false
+		return 0; # true ( tests disabled )
+	fi
+	has 'do' 		${DIST_TEST} || return 1; # false ( tests enabled )
+	has 'parallel' 	${DIST_TEST} || return 1; # false
+	if [[ "${pmqa_warned_notests:-0}" != 1 ]]; then
+		eqawarn "Tests disabled using empty DIST_TEST";
+		eqawarn "Please use RESTRICT=test or nuke problem tests"
+	fi
+	pmqa_warned_notests=1
+	return 1;
+}
