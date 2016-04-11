@@ -524,9 +524,7 @@ perl_test_disabled() {
 	fi
 	# The ability for users to disable all tests using DIST_TEST_OVERRIDE is clearly
 	# a design defect.
-	if [[ -n "${DIST_TEST_OVERRIDE}" ]]; then
-		[[ "${pm_warned_override}" != 1 ]] && ewarn "DIST_TEST_OVERRIDE is set to ${DIST_TEST_OVERRIDE}"
-		pm_warned_override=1
+	if perl_dist_override; then
 		has 'do' 		${DIST_TEST_OVERRIDE} || return 1; # false ( tests enabled )
 		has 'parallel' 	${DIST_TEST_OVERRIDE} || return 1; # false
 		return 0; # true ( tests disabled )
@@ -553,9 +551,7 @@ perl_test_verbose() {
 		fi
 		return 1; #false
 	fi
-	if [[ -n "${DIST_TEST_OVERRIDE}" ]]; then
-		[[ "${pm_warned_override}" != 1 ]] && ewarn "DIST_TEST_OVERRIDE is set to ${DIST_TEST_OVERRIDE}"
-		pm_warned_override=1
+	if perl_dist_override; then
 		if has 'verbose' ${DIST_TEST_OVERRIDE}; then
 			[[ "${pm_warned_verbose:-0}" != 1 ]] && "Enabled verbose testing due to DIST_TEST_OVERRIDE=verbose"
 			pm_warned_verbose=1
