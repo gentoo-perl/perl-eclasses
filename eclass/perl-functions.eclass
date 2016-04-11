@@ -531,3 +531,33 @@ perl_test_disabled() {
 	pmqa_warned_notests=1
 	return 1;
 }
+
+pm_warned_verbose=0
+perl_test_verbose() {
+	debug-print-function $FUNCNAME "$@"
+
+	if [[ "${EAPI:-0}" == 5 ]]; then
+		if ! has 0 "${TEST_VERBOSE:-0}"; then
+			[[ "${pm_warned_verbose:-0}" != 1 ]] && "Enabled verbose testing due to TEST_VERBOSE=${TEST_VERBOSE}"
+			pm_warned_verbose=1
+			return 0; # true
+		fi
+		return 1; #false
+	fi
+	if [[ -n "${DIST_TEST_OVERRIDE}" ]]; then
+		[[ "${pm_warned_override}" != 1 ]] && ewarn "DIST_TEST_OVERRIDE is set to ${DIST_TEST_OVERRIDE}"
+		pm_warned_override=1
+		if has 'verbose' ${DIST_TEST_OVERRIDE}; then
+			[[ "${pm_warned_verbose:-0}" != 1 ]] && "Enabled verbose testing due to DIST_TEST_OVERRIDE=verbose"
+			pm_warned_verbose=1
+			return 0; # true
+		fi
+		return 1; # false
+	fi
+	if has 'verbose' ${DIST_TEST}; then
+		[[ "${pm_warned_verbose:-0}" != 1 ]] && "Enabled verbose testing due to DIST_TEST=verbose"
+		pm_warned_verbose=1
+		return 0; # true
+	fi
+	return 1; # false
+}
