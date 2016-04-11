@@ -627,3 +627,62 @@ perl_test_parallel() {
 	# Nothing in any EAPI says "don't parallel", so parallel it is!
 	return 0; # true
 }
+
+pm_warned_network=0
+perl_test_network() {
+	debug-print-function $FUNCNAME "$@"
+
+	if [[ "${EAPI:-0}" == 5 ]]; then
+		# User wants to disable network tests, EAPI5 + Overlay assumes them on by default
+		if has 'network-test' ${USER_PERL_RESTRICT}; then
+			[[ "${pm_warned_network:-0}" != 1 ]] && ewarn "Disabled network testing due to USER_PERL_RESTRICT=network-test"
+			pm_warned_network=1
+			return 1; # false
+		fi
+		# EAPI5 + overlay == default to networking enabled
+		return 0;
+	fi
+
+	# EAPI6+
+	# User wants to disable network tests
+	if has 'network-test' ${USER_PERL_RESTRICT}; then
+		# Package wants them enabled
+		if has 'network' "${DIST_TEST}"; then
+			[[ "${pm_warned_network:-0}" != 1 ]] && ewarn "Disabled network testing due to USER_PERL_RESTRICT=network-test"
+			pm_warned_network=1
+		fi
+		# user is forcing defaults
+		return 1;
+	fi
+
+	# EAPI6 + DIST_TEST_OVERRIDE
+	# Override string always wins when set
+	if perl_dist_override; then
+		# Users disabled networking
+		if ! has 'network' ${DIST_TEST_OVERRIDE}; then
+			# package wants them enabled
+			if has 'network' "${DIST_TEST}"; then
+				[[ "${pm_warned_network:-0}" != 1 ]] && ewarn "Disabled DIST_TEST=network testing due to DIST_TEST_OVERRIDE !~ network"
+				pm_warned_network=1
+			fi
+			return 1;
+		fi
+		# User enabled networking
+		# Package didn't enable them
+		if ! has 'network' "${DIST_TEST}"; then
+			[[ "${pm_warned_network:-0}" != 1 ]] && ewarn "Enabled network testing due to DIST_TEST_OVERRIDE =~ network"
+			pm_warned_network=1
+		fi
+		return 0;
+	fi
+
+	# EAPI6 + DIST_TEST only
+
+	[ ! -v DIST_TEST ] && return 1; # false, assume networking disabled without DIST_TEST set
+
+	# not in dist-test, default is to assume off.
+	has 'network' ${DIST_TEST} || return 1; # False
+
+	[[ "${pm_warned_network:-0}" != 1 ]] && ewarn "Enabled network testing due to DIST_TEST =~ network"
+	pm_warned_network=1
+}
